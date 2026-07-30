@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# Create dedicated non-root system user if it doesn't exist
+if ! id -u retailedge > /dev/null 2>&1; then
+    useradd --system --no-create-home --shell /usr/sbin/nologin retailedge
+    echo "Created system user: retailedge"
+fi
+
+# Reload systemd, enable and start the service
+systemctl daemon-reload
+systemctl enable retailedge-heartbeat
+systemctl start retailedge-heartbeat
+
+echo "retailedge-heartbeat installed and started successfully"

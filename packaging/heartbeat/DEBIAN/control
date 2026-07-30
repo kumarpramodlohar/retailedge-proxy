@@ -1,0 +1,8 @@
+Package: retailedge-heartbeat
+Version: 0.1.0
+Architecture: arm64
+Maintainer: Pramod Lohar <kumarpramod.asn@gmail.com>
+Description: RetailEdge heartbeat service
+ Proof-of-concept systemd service for the RetailEdge store proxy.
+ Deploys via Debian package with dedicated non-root user and restart policy.
+ 

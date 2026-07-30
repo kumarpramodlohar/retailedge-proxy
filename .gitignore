@@ -1,0 +1,23 @@
+# Go build outputs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Built binary inside packaging
+packaging/heartbeat/usr/local/bin/retailedge-heartbeat
+
+# Built .deb packages
+*.deb
+
+# Go module cache
+vendor/
+
+# VS Code
+.vscode/
+
+# Mac
+.DS_Store
