@@ -1,0 +1,7 @@
+Package: retailedge-api
+Version: 0.1.0
+Architecture: arm64
+Maintainer: Pramod Lohar <kumarpramod.asn@gmail.com>
+Description: RetailEdge API Service
+ Drains the local Change Request Queue to the Cloud REST API with
+ exponential backoff and jitter. Queues writes when WAN is down.

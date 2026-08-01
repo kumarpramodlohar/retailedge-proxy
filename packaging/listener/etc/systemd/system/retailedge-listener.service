@@ -1,0 +1,19 @@
+[Unit]
+Description=RetailEdge gRPC Listener Service
+Documentation=https://github.com/kumarpramodlohar/retailedge-proxy
+After=network.target
+
+[Service]
+Type=simple
+User=retailedge
+Group=retailedge
+WorkingDirectory=/var/lib/retailedge
+ExecStart=/usr/local/bin/retailedge-listener
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=retailedge-listener
+
+[Install]
+WantedBy=multi-user.target

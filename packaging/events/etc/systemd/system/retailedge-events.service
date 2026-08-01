@@ -1,0 +1,19 @@
+[Unit]
+Description=RetailEdge Events Service
+Documentation=https://github.com/kumarpramodlohar/retailedge-proxy
+After=network.target
+
+[Service]
+Type=simple
+User=retailedge
+Group=retailedge
+WorkingDirectory=/var/lib/retailedge
+ExecStart=/usr/local/bin/retailedge-events
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=retailedge-events
+
+[Install]
+WantedBy=multi-user.target

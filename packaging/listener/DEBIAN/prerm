@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+systemctl stop retailedge-listener || true
+systemctl disable retailedge-listener || true
+echo "retailedge-listener stopped"

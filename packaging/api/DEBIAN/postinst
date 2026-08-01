@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+if ! id -u retailedge > /dev/null 2>&1; then
+    useradd --system --no-create-home --shell /usr/sbin/nologin retailedge
+    echo "Created system user: retailedge"
+fi
+
+systemctl daemon-reload
+systemctl enable retailedge-api
+systemctl start retailedge-api
+
+echo "retailedge-api installed and started"

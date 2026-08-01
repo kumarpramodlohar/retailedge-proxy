@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+systemctl stop retailedge-api || true
+systemctl disable retailedge-api || true
+echo "retailedge-api stopped"

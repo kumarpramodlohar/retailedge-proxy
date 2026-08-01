@@ -1,0 +1,7 @@
+Package: retailedge-listener
+Version: 0.1.0
+Architecture: arm64
+Maintainer: Pramod Lohar <kumarpramod.asn@gmail.com>
+Description: RetailEdge gRPC Listener Service
+ Serves product master data reads from the Near Cache over a Unix
+ domain socket. Runs migrations at startup. Single-file SQLite database.

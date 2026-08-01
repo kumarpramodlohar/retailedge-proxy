@@ -17,7 +17,7 @@ func main() {
 	logger.Println("RetailEdge Events Service starting")
 
 	// Load site config — no service discovery, static per store
-	cfg, err := config.Load("config/site.conf")
+	cfg, err := config.Load("/etc/retailedge/site.conf")
 	if err != nil {
 		logger.Fatalf("FATAL: load config: %v", err)
 	}

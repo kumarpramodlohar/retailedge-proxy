@@ -1,0 +1,7 @@
+Package: retailedge-events
+Version: 0.1.0
+Architecture: arm64
+Maintainer: Pramod Lohar <kumarpramod.asn@gmail.com>
+Description: RetailEdge Events Service
+ Consumes inbound MDM product change events from GCP Pub/Sub and
+ updates the local Near Cache. Single writer to the products table.

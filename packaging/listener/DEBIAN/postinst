@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+if ! id -u retailedge > /dev/null 2>&1; then
+    useradd --system --no-create-home --shell /usr/sbin/nologin retailedge
+    echo "Created system user: retailedge"
+fi
+
+# Set ownership on config directory
+chown -R retailedge:retailedge /etc/retailedge
+
+systemctl daemon-reload
+systemctl enable retailedge-listener
+systemctl start retailedge-listener
+
+echo "retailedge-listener installed and started"

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+systemctl stop retailedge-events || true
+systemctl disable retailedge-events || true
+echo "retailedge-events stopped"

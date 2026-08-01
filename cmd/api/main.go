@@ -17,7 +17,7 @@ func main() {
 	logger.Println("RetailEdge API Service starting")
 
 	// Load site config
-	cfg, err := config.Load("config/site.conf")
+	cfg, err := config.Load("/etc/retailedge/site.conf")
 	if err != nil {
 		logger.Fatalf("FATAL: load config: %v", err)
 	}

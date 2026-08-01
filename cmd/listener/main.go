@@ -22,7 +22,7 @@ import (
 
 // socketPath is the Unix domain socket the Listener binds to.
 // The Java calling client connects to this path.
-const socketPath = "/tmp/retailedge.sock"
+const socketPath = "/var/lib/retailedge/retailedge.sock"
 
 // server implements the gRPC ProductService interface.
 type server struct {
@@ -99,7 +99,7 @@ func main() {
 	logger.Println("RetailEdge gRPC Listener starting")
 
 	// Open the Near Cache database — runs migrations automatically
-	db, err := cache.Open("/tmp/retailedge.db", logger)
+	db, err := cache.Open("/var/lib/retailedge/retailedge.db", logger)
 	if err != nil {
 		logger.Fatalf("FATAL: open database: %v", err)
 	}
