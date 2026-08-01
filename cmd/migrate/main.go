@@ -1,27 +1,21 @@
 package main
 
 import (
-	"io/fs"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/pramodlohar/retailedge-proxy/internal/cache"
-	"github.com/pramodlohar/retailedge-proxy/internal/migrations"
 )
 
 func main() {
 	logger := log.New(os.Stdout, "[migrate] ", log.LstdFlags)
 	logger.Println("RetailEdge migration runner starting")
 
-	files, err := loadMigrations()
-	if err != nil {
-		logger.Fatalf("FATAL: load migrations: %v", err)
-	}
-
+	// In P2 this path comes from site config.
+	// For P1 verification we use a fixed test path.
 	dbPath := "/tmp/retailedge-test.db"
 
-	db, err := cache.Open(dbPath, logger, files)
+	db, err := cache.Open(dbPath, logger)
 	if err != nil {
 		logger.Fatalf("FATAL: %v", err)
 	}
@@ -71,28 +65,4 @@ func main() {
 		}
 		logger.Printf("  → %s | %s | %s", version, appliedAt, description)
 	}
-}
-
-func loadMigrations() ([]cache.MigrationFile, error) {
-	var files []cache.MigrationFile
-
-	err := fs.WalkDir(migrations.FS, "sql", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(path, ".sql") {
-			return nil
-		}
-		content, err := migrations.FS.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		files = append(files, cache.MigrationFile{
-			Filename: d.Name(),
-			SQL:      string(content),
-		})
-		return nil
-	})
-
-	return files, err
 }

@@ -1,34 +1,39 @@
 package cache
 
 import (
+	"embed"
 	"fmt"
+	"io/fs"
 	"sort"
 	"strings"
 	"time"
 )
 
-// MigrationFile is a single SQL migration passed in from the caller.
-type MigrationFile struct {
-	Filename string
-	SQL      string
-}
+// migrationFiles embeds all SQL files from the sql/ subdirectory.
+// The cache package owns its own schema — no external package needed.
+//
+//go:embed sql/*.sql
+var migrationFiles embed.FS
 
-// migration is the internal parsed form.
+// migration is the internal parsed form of a SQL migration file.
 type migration struct {
 	version     string
 	description string
 	sql         string
 }
 
+// MigrationFile is no longer needed by callers — kept for compatibility
+// with cmd/migrate during transition. Will be removed in P2.
+
 // Migrate runs all pending migrations in version order.
 // Safe to call on every startup — skips already-applied migrations.
 // Refuses to start if DB schema is ahead of known migrations.
-func (db *DB) Migrate(files []MigrationFile) error {
+func (db *DB) Migrate() error {
 	db.logger.Println("starting migration runner")
 
-	available, err := parseMigrations(files)
+	available, err := db.loadMigrations()
 	if err != nil {
-		return fmt.Errorf("parse migrations: %w", err)
+		return fmt.Errorf("load migrations: %w", err)
 	}
 	db.logger.Printf("found %d migration(s)", len(available))
 
@@ -62,45 +67,70 @@ func (db *DB) Migrate(files []MigrationFile) error {
 	return nil
 }
 
-func parseMigrations(files []MigrationFile) ([]migration, error) {
+// loadMigrations reads all .sql files from the embedded sql/ directory,
+// parses their version numbers, and returns them sorted by version.
+func (db *DB) loadMigrations() ([]migration, error) {
 	var result []migration
-	for _, f := range files {
-		parts := strings.SplitN(f.Filename, "_", 2)
-		if len(parts) < 2 {
-			return nil, fmt.Errorf("filename %s must match NNN_description.sql", f.Filename)
+
+	err := fs.WalkDir(migrationFiles, "sql", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
+		if d.IsDir() || !strings.HasSuffix(path, ".sql") {
+			return nil
+		}
+
+		content, err := migrationFiles.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", path, err)
+		}
+
+		// Version is the numeric prefix before the first underscore
+		// e.g. "001_create_products.sql" → version "001"
+		parts := strings.SplitN(d.Name(), "_", 2)
+		if len(parts) < 2 {
+			return fmt.Errorf("filename %s must match NNN_description.sql", d.Name())
+		}
+
 		desc := strings.TrimSuffix(parts[1], ".sql")
 		desc = strings.ReplaceAll(desc, "_", " ")
+
 		result = append(result, migration{
 			version:     parts[0],
 			description: desc,
-			sql:         f.SQL,
+			sql:         string(content),
 		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
+
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].version < result[j].version
 	})
+
 	return result, nil
 }
 
 func (db *DB) bootstrapVersionTable(available []migration) error {
 	for _, m := range available {
 		if m.version == "001" {
-			// Create the schema_version table if it does not exist
 			if _, err := db.conn.Exec(m.sql); err != nil {
 				return fmt.Errorf("bootstrap schema_version: %w", err)
 			}
-			// Record migration 001 itself — but only if not already there
 			var count int
 			err := db.conn.QueryRow(
-				`SELECT COUNT(*) FROM schema_version WHERE version = ?`, m.version,
+				`SELECT COUNT(*) FROM schema_version WHERE version = ?`,
+				m.version,
 			).Scan(&count)
 			if err != nil {
 				return fmt.Errorf("check if 001 recorded: %w", err)
 			}
 			if count == 0 {
 				_, err = db.conn.Exec(
-					`INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)`,
+					`INSERT INTO schema_version (version, applied_at, description)
+					 VALUES (?, ?, ?)`,
 					m.version,
 					time.Now().UTC().Format(time.RFC3339),
 					m.description,
@@ -117,7 +147,9 @@ func (db *DB) bootstrapVersionTable(available []migration) error {
 }
 
 func (db *DB) appliedVersions() (map[string]bool, error) {
-	rows, err := db.conn.Query(`SELECT version FROM schema_version ORDER BY version`)
+	rows, err := db.conn.Query(
+		`SELECT version FROM schema_version ORDER BY version`,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("query schema_version: %w", err)
 	}
@@ -143,7 +175,7 @@ func (db *DB) checkVersionMismatch(available []migration, applied map[string]boo
 		if !known[v] {
 			return fmt.Errorf(
 				"FATAL: database has migration %s but binary does not — "+
-					"schema ahead of binary, deploy correct version first", v)
+					"schema is ahead of this binary, deploy correct version first", v)
 		}
 	}
 	return nil
@@ -173,7 +205,8 @@ func (db *DB) applyMigration(m migration) error {
 	}
 
 	_, err = tx.Exec(
-		`INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)`,
+		`INSERT INTO schema_version (version, applied_at, description)
+		 VALUES (?, ?, ?)`,
 		m.version,
 		time.Now().UTC().Format(time.RFC3339),
 		m.description,
