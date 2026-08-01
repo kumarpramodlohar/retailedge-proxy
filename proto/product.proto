@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package retailedge;
+
+option go_package = "github.com/pramodlohar/retailedge-proxy/proto/gen";
+
+// ProductService serves product master data reads from the Near Cache.
+// The Java calling client connects via gRPC over a Unix domain socket.
+// This service is read-only — the Events Service is the only writer.
+service ProductService {
+  // GetProduct returns one product by its ID.
+  // Returns NOT_FOUND if the product does not exist in the cache.
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+
+  // ListProducts returns all products, optionally filtered by category.
+  // Returns an empty list (not an error) if no products match.
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+}
+
+// GetProductRequest identifies which product to fetch.
+message GetProductRequest {
+  string id = 1;
+}
+
+// GetProductResponse carries the product data.
+message GetProductResponse {
+  Product product = 1;
+}
+
+// ListProductsRequest filters the product list.
+message ListProductsRequest {
+  // category filters results. Empty string returns all products.
+  string category = 1;
+}
+
+// ListProductsResponse carries the matching products.
+message ListProductsResponse {
+  repeated Product products = 1;
+}
+
+// Product is the canonical product master data record.
+// Fields match the products table in the SQLite Near Cache exactly.
+message Product {
+  string id         = 1;
+  string name       = 2;
+  double price      = 3;
+  string category   = 4;
+  bool   in_stock   = 5;
+  int32  version    = 6;
+  string updated_at = 7;
+}
