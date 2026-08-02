@@ -17,10 +17,27 @@ type QueueEntry struct {
 	Error       string
 }
 
+const maxQueueSize = 10000
+
 // EnqueueChange adds a product change to the outbound queue.
-// Called by the gRPC Listener when the Java client submits a write.
-// Returns immediately — the write is durable in SQLite before this returns.
+// Returns an error if the queue is full — protects disk from unbounded growth.
+// At 1 write/second a full queue represents ~2.7 hours of offline operation.
 func (db *DB) EnqueueChange(productID string, payload string) error {
+	// Check queue depth before inserting
+	var pending int
+	if err := db.conn.QueryRow(
+		`SELECT COUNT(*) FROM change_request_queue WHERE status = 'pending'`,
+	).Scan(&pending); err != nil {
+		return fmt.Errorf("check queue size: %w", err)
+	}
+
+	if pending >= maxQueueSize {
+		return fmt.Errorf(
+			"queue full (%d/%d pending) — store may be offline too long: "+
+				"writes rejected until queue drains",
+			pending, maxQueueSize)
+	}
+
 	_, err := db.conn.Exec(`
 		INSERT INTO change_request_queue
 			(product_id, payload, status, attempts, created_at)

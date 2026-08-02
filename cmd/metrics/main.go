@@ -15,7 +15,6 @@ func main() {
 
 	cfg, err := config.Load("/etc/retailedge/site.conf")
 	if err != nil {
-		// Fall back to local config during development
 		cfg, err = config.Load("config/site.conf")
 		if err != nil {
 			logger.Fatalf("FATAL: load config: %v", err)
@@ -33,38 +32,46 @@ func main() {
 		logger.Fatalf("FATAL: collect metrics: %v", err)
 	}
 
-	// Print dashboard to stdout
+	queueDisplay := fmt.Sprintf("pending=%-4d sent=%-4d failed=%-2d cap=%d",
+		m.QueuePending, m.QueueSent, m.QueueFailed, m.QueueCapacity)
+
+	queuePct := 0
+	if m.QueueCapacity > 0 {
+		queuePct = (m.QueuePending * 100) / m.QueueCapacity
+	}
+
 	fmt.Println()
-	fmt.Println("╔══════════════════════════════════════════════╗")
-	fmt.Printf("║  RetailEdge Proxy — Store %s         ║\n", cfg.StoreID)
-	fmt.Println("╠══════════════════════════════════════════════╣")
-	fmt.Printf("║  Products in Near Cache : %-18d ║\n", m.ProductCount)
+	fmt.Println("╔══════════════════════════════════════════════════════╗")
+	fmt.Printf( "║  RetailEdge Proxy — Store %-26s ║\n", cfg.StoreID)
+	fmt.Println("╠══════════════════════════════════════════════════════╣")
+	fmt.Printf( "║  Products in Near Cache : %-26d ║\n", m.ProductCount)
 
 	if m.LastSyncAt != nil {
 		age := time.Since(*m.LastSyncAt).Round(time.Second)
-		fmt.Printf("║  Last inbound sync      : %-18s ║\n", age.String()+" ago")
+		fmt.Printf("║  Last inbound sync      : %-26s ║\n", age.String()+" ago")
 	} else {
-		fmt.Printf("║  Last inbound sync      : %-18s ║\n", "never")
+		fmt.Printf("║  Last inbound sync      : %-26s ║\n", "never")
 	}
 
-	queueStatus := fmt.Sprintf("pending=%-3d sent=%-3d failed=%-1d",
-		m.QueuePending, m.QueueSent, m.QueueFailed)
-	fmt.Printf("║  Write queue            : %-18s ║\n", queueStatus)
-	fmt.Printf("║  Schema version         : %-18s ║\n", m.SchemaVersion)
-	fmt.Println("╠══════════════════════════════════════════════╣")
+	fmt.Printf("║  Write queue            : %-26s ║\n", queueDisplay)
+	fmt.Printf("║  Queue fill level       : %-25d%% ║\n", queuePct)
+	fmt.Printf("║  Schema version         : %-26s ║\n", m.SchemaVersion)
+	fmt.Println("╠══════════════════════════════════════════════════════╣")
 
-	// Health status
 	health := "✅ HEALTHY"
 	if m.ProductCount == 0 {
 		health = "⚠️  EMPTY CACHE"
 	} else if m.CacheAgeSecs > 1800 {
 		health = "⚠️  STALE CACHE (>30m)"
+	} else if queuePct >= 80 {
+		health = "🔴 QUEUE NEAR FULL (>80%)"
 	} else if m.QueuePending > 50 {
 		health = "⚠️  QUEUE BACKLOG"
 	} else if m.QueueFailed > 0 {
 		health = "❌ FAILED WRITES"
 	}
-	fmt.Printf("║  Status                 : %-18s ║\n", health)
-	fmt.Println("╚══════════════════════════════════════════════╝")
+
+	fmt.Printf("║  Status                 : %-26s ║\n", health)
+	fmt.Println("╚══════════════════════════════════════════════════════╝")
 	fmt.Println()
 }

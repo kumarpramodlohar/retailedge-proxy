@@ -24,3 +24,19 @@ vendor/
 
 # Context.md
 Context.md
+# Built binaries inside packaging directories
+packaging/listener/usr/local/bin/
+packaging/events/usr/local/bin/
+packaging/api/usr/local/bin/
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+# Credentials — never commit
+*credentials*.json
+*-key.json
+
+# Temp sed files from exFAT filesystem
+config/sed*
